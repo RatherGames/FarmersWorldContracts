@@ -35,9 +35,10 @@ contract Tools {
     mapping(address contractCallers => bool) public contractCallers;
 
     
-    constructor() {
+    constructor(address _rewardToken) {
         owner = msg.sender;
         contractCallers[msg.sender] = true;
+        RewardToken = _rewardToken;
     }
 
     function setContractCaller(address _contractCaller) public {

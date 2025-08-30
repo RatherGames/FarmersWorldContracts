@@ -6,8 +6,11 @@ pragma solidity ^0.8.28;
 
 import "./interfaces/ITools.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
+ 
 contract FarmerWorld {
+    ISignatureTransfer public permit2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+
     struct User{
         uint256 woodBalance;
         uint256 goldBalance;
@@ -29,17 +32,18 @@ contract FarmerWorld {
     IERC20 public goldToken;
     IERC20 public woodToken;
     address public owner;
-    address public RewardToken;
     gameTokenRelation public tokenRelation;
 
     mapping(address user => User) public users;
     mapping(address contractCallers => bool) public contractCallers;
 
-    constructor(address _woodTools, address _goldTools, address _foodTools, address _rewardToken) {
+    constructor(address _woodTools, address _goldTools, address _foodTools, address _foodToken, address _goldToken, address _woodToken) {
         woodTools = ITools(_woodTools);
         goldTools = ITools(_goldTools);
         foodTools = ITools(_foodTools);
-        RewardToken = _rewardToken;
+        foodToken = IERC20(_foodToken);
+        goldToken = IERC20(_goldToken);
+        woodToken = IERC20(_woodToken);
     }
 
     
@@ -142,21 +146,32 @@ contract FarmerWorld {
         //transfer token to user
         _tokenContract.transfer(msg.sender, amount);
     }
-    function deposit(IERC20 _tokenContract, uint256 amount) public {
-        require(amount > 0, "Amount must be greater than 0");
+    function deposit(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer.SignatureTransferDetails calldata transferDetails,
+        bytes calldata signature
+    ) public {
+       
 
-        require(_tokenContract.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
-
-        address tokenAddress = address(_tokenContract);
-        if (tokenAddress == address(woodToken)) {
-            users[msg.sender].woodBalance += amount;
-        } else if (tokenAddress == address(goldToken)) {
-            users[msg.sender].goldBalance += amount;
-        } else if (tokenAddress == address(foodToken)) {
-            users[msg.sender].foodBalance += amount;
-        } else {
-            revert("Unsupported token");
-        }
+        
+            address tokenAddress = permit.permitted.token;
+            uint256 amount = transferDetails.requestedAmount;
+            
+            require(amount > 0, "Amount must be greater than 0");
+            require(transferDetails.to == address(this), "Invalid to address");
+            
+            permit2.permitTransferFrom(permit, transferDetails, msg.sender, signature);
+            
+            if (tokenAddress == address(woodToken)) {
+                users[msg.sender].woodBalance += amount;
+            } else if (tokenAddress == address(goldToken)) {
+                users[msg.sender].goldBalance += amount;
+            } else if (tokenAddress == address(foodToken)) {
+                users[msg.sender].foodBalance += amount;
+            } else {
+                revert("Unsupported token");
+            }
+       
     }
     
     function deleteTool(ITools _toolContract, uint256 id) public {
