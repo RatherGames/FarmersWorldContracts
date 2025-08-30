@@ -46,8 +46,6 @@ contract FarmerWorld {
         woodToken = IERC20(_woodToken);
     }
 
-    
-
     // user functions
     function craft(ITools _toolContract, uint256 _toolLvl) public {
         //get price of tool
@@ -66,21 +64,18 @@ contract FarmerWorld {
     }
 
     function harvest(ITools _toolContract, uint id) public {
-            // get tool user info
+           
         ITools.UserTools memory userToolStatus = _toolContract.userTools(msg.sender, id);
-        ITools.Tool memory toolInfo = _toolContract.tools(userToolStatus.lvl);
-        //check if tool is valid
+        ITools.Tool memory toolInfo = _t //check if tool is valid
         require(userToolStatus.lvl != 0, "Tool not found");
-        //check if tool is usable
-        require(userToolStatus.durability > toolInfo.durabilityConsumption, "Tool is broken");
-        //update tool durability
+        require(userToolStatus.durability >= toolInfo.durabilityConsumption, "Tool is broken");
         _toolContract.editUserTool(msg.sender, id, userToolStatus.lvl, userToolStatus.durability-toolInfo.durabilityConsumption, block.timestamp);
-        //update user durability
+        if(userToolStatus.durability == toolInfo.durabilityConsumption){
+            deleteTool(_toolContract, id);
+        }
         uint256 energyConsumption = _toolContract.tools(userToolStatus.lvl).energyConsumption;
         require(users[msg.sender].energy >= energyConsumption, "Not enough energy");
         users[msg.sender].energy -= energyConsumption;
-        //Calculated reward based on time
-         //Calculate reward based on time passed since last harvest
         uint256 timePassed = block.timestamp - userToolStatus.lastHarvest;
         uint256 maxChargeTime = toolInfo.chargeTime;
         uint256 reward;
@@ -94,16 +89,32 @@ contract FarmerWorld {
         }
         
         if(_toolContract == woodTools){
-            users[msg.sender].woodBalance += reward;
+            woodToken.transfer(msg.sender, reward);
         }else if(_toolContract == goldTools){
-            users[msg.sender].goldBalance += reward;
+            goldToken.transfer(msg.sender, reward);
         }else if(_toolContract == foodTools){
-            users[msg.sender].foodBalance += reward;
+            foodToken.transfer(msg.sender, reward);
         }
 
     }
-    function repair(ITools _toolContract, uint id, uint256 goldAmount) public {
-        require(users[msg.sender].goldBalance >= goldAmount, "Not enough gold");
+
+    
+    function repair(
+        ITools _toolContract, 
+        uint id, 
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer.SignatureTransferDetails calldata transferDetails,
+        bytes calldata signature
+    ) public {
+        address tokenAddress = permit.permitted.token;
+        uint256 goldAmount = transferDetails.requestedAmount;
+
+        require(goldAmount > 0, "Amount must be greater than 0");
+        require(transferDetails.to == address(this), "Invalid to address");
+        require(tokenAddress == address(goldToken), "Only gold token is supported");
+
+        permit2.permitTransferFrom(permit, transferDetails, msg.sender, signature);
+
         // get tool user info
         ITools.UserTools memory userToolStatus = _toolContract.userTools(msg.sender, id);
         ITools.Tool memory toolInfo = _toolContract.tools(userToolStatus.lvl);
@@ -111,11 +122,14 @@ contract FarmerWorld {
 
         uint256 enduranceToAdd = goldAmount * tokenRelation.goldToEndurance;
         uint256 maxEndurance = toolInfo.durability;
-        enduranceToAdd = enduranceToAdd > maxEndurance ? maxEndurance : enduranceToAdd;
+        uint256 newDurability = userToolStatus.durability + enduranceToAdd;
+        
+        if (newDurability > maxEndurance) {
+            newDurability = maxEndurance;
+        }
+        
         //update tool durability
-        _toolContract.editUserTool(msg.sender, id, userToolStatus.lvl, userToolStatus.durability+enduranceToAdd, block.timestamp);
-        //update user gold
-        users[msg.sender].goldBalance -= goldAmount;
+        _toolContract.editUserTool(msg.sender, id, userToolStatus.lvl, newDurability, userToolStatus.lastHarvest);
     }
 
     function buyEnergy(address user, uint goldAmount) public{
@@ -146,46 +160,44 @@ contract FarmerWorld {
         //transfer token to user
         _tokenContract.transfer(msg.sender, amount);
     }
+
     function deposit(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails calldata transferDetails,
         bytes calldata signature
     ) public {
-       
-
+        address tokenAddress = permit.permitted.token;
+        uint256 amount = transferDetails.requestedAmount;
         
-            address tokenAddress = permit.permitted.token;
-            uint256 amount = transferDetails.requestedAmount;
-            
-            require(amount > 0, "Amount must be greater than 0");
-            require(transferDetails.to == address(this), "Invalid to address");
-            
-            permit2.permitTransferFrom(permit, transferDetails, msg.sender, signature);
-            
-            if (tokenAddress == address(woodToken)) {
-                users[msg.sender].woodBalance += amount;
-            } else if (tokenAddress == address(goldToken)) {
-                users[msg.sender].goldBalance += amount;
-            } else if (tokenAddress == address(foodToken)) {
-                users[msg.sender].foodBalance += amount;
-            } else {
-                revert("Unsupported token");
-            }
+        require(amount > 0, "Amount must be greater than 0");
+        require(transferDetails.to == address(this), "Invalid to address");
+        
+        permit2.permitTransferFrom(permit, transferDetails, msg.sender, signature);
+        
+        if (tokenAddress == address(woodToken)) {
+            users[msg.sender].woodBalance += amount;
+        } else if (tokenAddress == address(goldToken)) {
+            users[msg.sender].goldBalance += amount;
+        } else if (tokenAddress == address(foodToken)) {
+            users[msg.sender].foodBalance += amount;
+        } else {
+            revert("Unsupported token");
+        }
        
     }
     
-    function deleteTool(ITools _toolContract, uint256 id) public {
-        uint256 totalTools = _toolContract.totalUserTools(msg.sender);
+    function deleteTool(ITools _toolContract, uint256 id, address user) public {
+        uint256 totalTools = _toolContract.totalUserTools(user);
         require(id < totalTools, "Invalid tool ID");
 
         // If the tool to be deleted is not the last one, replace it with the last one.
         if (id < totalTools - 1) {
-            ITools.UserTools memory lastTool = _toolContract.userTools(msg.sender, totalTools - 1);
-            _toolContract.editUserTool(msg.sender, id, lastTool.lvl, lastTool.durability, lastTool.lastHarvest);
+            ITools.UserTools memory lastTool = _toolContract.userTools(user, totalTools - 1);
+            _toolContract.editUserTool(user, id, lastTool.lvl, lastTool.durability, lastTool.lastHarvest);
         }
 
         // Delete the last tool's data.
-        _toolContract.editUserTool(msg.sender, totalTools - 1, 0, 0, 0);
+        _toolContract.editUserTool(user, totalTools - 1, 0, 0, 0);
     }
 
     // owner functions
