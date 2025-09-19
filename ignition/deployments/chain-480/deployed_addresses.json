@@ -2,8 +2,8 @@
   "DeployModule#Food": "0xf5B63B0D91AdA138232fc58d14f03AF2885Cb667",
   "DeployModule#Gold": "0x573Ad22d8eE4916F9cefeBc50C5247F69e5c62c2",
   "DeployModule#Wood": "0xd4fAEbEbfa262d4Bb30CDab5858fA6B760d3d531",
-  "DeployModule#foodTools": "0x37Ab199494C9256D9Db31834C2F520F20036956b",
-  "DeployModule#goldTools": "0x492DEe1430d871A559AE062c547Eb248929a85B3",
-  "DeployModule#woodTools": "0xB637f5e7AB92cf8443a07ffeEfacC9c0aB0c88dB",
-  "DeployModule#FarmerWorld": "0xb03eAd47691735850630E146c3F790458Da780B7"
+  "DeployToolsModule#goldTools": "0xB8F24cDdf9F36Be85E9AA5d3F54909825E65D1F0",
+  "DeployToolsModule#woodTools": "0x9865e76262926a4E37BEdfE6fC893283D976c11E",
+  "DeployToolsModule#foodTools": "0x17c44Cc3d397348Fa43F704b1C0a477228d7d63c",
+  "DeployModule#FarmerWorld": "0x74b025D49fb7e83131782AC96DF50A42D9e7a666"
 }

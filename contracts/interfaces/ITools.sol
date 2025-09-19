@@ -35,13 +35,15 @@ interface ITools {
     function getAllUserTools(address user) external view returns (UserTools[] memory);
     function getToolCost(uint256 lvl) external view returns (uint256, uint256);
     function totalUserTools(address user) external view returns (uint256);
+    function getTotalUserTools(address user) external view returns (uint256);
 
     // State-changing functions
     function setContractCaller(address _contractCaller) external;
     function setOwner(address _owner) external;
     function addTool(uint256 lvl, Tool memory tool, ToolCost memory _toolCost) external;
+    function addTools(uint256[] memory lvls, Tool[] memory _tools, ToolCost[] memory _toolCosts) external;
     function editTool(uint256 lvl, Tool memory tool) external;
     function editUserTool(address user, uint256 id, uint256 lvl, uint256 durability, uint256 lastHarvest) external;
-    function addUserTool(address user, uint256 id, uint256 lvl) external;
+    function addUserTool(address user, uint256 lvl) external;
 }
 

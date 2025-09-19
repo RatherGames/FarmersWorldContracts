@@ -1,0 +1,107 @@
+{
+    "woodTools": {
+        "lvls": [0, 1, 2],
+        "stats": [
+            {
+                "energyConsumption": 10,
+                "durability": 100,
+                "durabilityConsumption": 5,
+                "chargeTime": 3600,
+                "rewardRate": 5
+            },
+            {
+                "energyConsumption": 20,
+                "durability": 300,
+                "durabilityConsumption": 15,
+                "chargeTime": 3600,
+                "rewardRate": 17
+            },
+            {
+                "energyConsumption": 40,
+                "durability": 900,
+                "durabilityConsumption": 45,
+                "chargeTime": 3600,
+                "rewardRate": 54
+            }
+        ],
+        "costs": [
+            {
+                "woodCost": 2400,
+                "goldCost": 400,
+                "repayCost": 1
+            },
+            {
+                "woodCost": 7200,
+                "goldCost": 1200,
+                "repayCost": 1
+            },
+            {
+                "woodCost": 21600,
+                "goldCost": 3600,
+                "repayCost": 1
+            }
+        ]
+    },
+    "FoodTools": {
+        "lvls": [0, 1, 2],
+        "stats": [
+            {
+                "energyConsumption": 0,
+                "durability": 200,
+                "durabilityConsumption": 5,
+                "chargeTime": 3600,
+                "rewardRate": 5
+            },
+            {
+                "energyConsumption": 0,
+                "durability": 800,
+                "durabilityConsumption": 20,
+                "chargeTime": 3600,
+                "rewardRate": 20
+            },
+            {
+                "energyConsumption": 0,
+                "durability": 3200,
+                "durabilityConsumption": 32,
+                "chargeTime": 3600,
+                "rewardRate": 80
+            }
+        ],
+        "costs": [
+            {
+                "woodCost": 1200,
+                "goldCost": 200,
+                "repayCost": 3
+            },
+            {
+                "woodCost": 4800,
+                "goldCost": 800,
+                "repayCost": 1
+            },
+            {
+                "woodCost": 19200,
+                "goldCost": 3200,
+                "repayCost": 1
+            }
+        ]
+    },
+    "GoldTools": {
+        "lvls": [0],
+        "stats": [
+            {
+                "energyConsumption": 44,
+                "durability": 250,
+                "durabilityConsumption": 5,
+                "chargeTime": 7200,
+                "rewardRate": 100
+            }
+        ],
+        "costs": [
+            {
+                "woodCost": 24000,
+                "goldCost": 400,
+                "repayCost": 2
+            }
+        ]
+    }
+}

@@ -7,6 +7,10 @@ pragma solidity ^0.8.28;
 import "./interfaces/ITools.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
+
+interface IAddressBook {
+    function addressVerifiedUntil(address account) external view returns (uint256 timestamp);
+}
  
 contract FarmerWorld {
     ISignatureTransfer public permit2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
@@ -17,6 +21,7 @@ contract FarmerWorld {
         uint256 foodBalance;
         uint256 energy;
         uint256 maxEnergy;
+        bool freeClaimed;
     }
 
     struct gameTokenRelation{
@@ -37,13 +42,33 @@ contract FarmerWorld {
     mapping(address user => User) public users;
     mapping(address contractCallers => bool) public contractCallers;
 
-    constructor(address _woodTools, address _goldTools, address _foodTools, address _foodToken, address _goldToken, address _woodToken) {
-        woodTools = ITools(_woodTools);
-        goldTools = ITools(_goldTools);
-        foodTools = ITools(_foodTools);
+    constructor( address _foodToken, address _goldToken, address _woodToken, address _owner) {
         foodToken = IERC20(_foodToken);
         goldToken = IERC20(_goldToken);
         woodToken = IERC20(_woodToken);
+        owner = _owner;
+        contractCallers[_owner] = true;
+    }
+
+    function setTools(address _woodTools, address _goldTools, address _foodTools) public {
+        require(msg.sender == owner, "Only owner can set tools");
+        woodTools = ITools(_woodTools);
+        goldTools = ITools(_goldTools);
+        foodTools = ITools(_foodTools);
+    }
+
+    function freeClaim(uint option) public {
+        require(!users[msg.sender].freeClaimed, "Free claim already claimed");
+        require(IAddressBook(msg.sender).addressVerifiedUntil(msg.sender) > 0, "Address not verified");
+        users[msg.sender].freeClaimed = true;
+        users[msg.sender].energy = users[msg.sender].maxEnergy;
+        if(option != 0){ // 0 = Food tool 1: Wood tool
+            // give free wood tool
+            woodTools.addUserTool(msg.sender, 1);
+        }else{
+            // give Food tool
+            foodTools.addUserTool(msg.sender, 1);
+        }
     }
 
     // user functions
@@ -57,21 +82,20 @@ contract FarmerWorld {
         users[msg.sender].woodBalance -= woodCost;
         users[msg.sender].goldBalance -= gooldCost;
         //get max id
-        uint256 maxId = _toolContract.totalUserTools(msg.sender);
+        // uint256 maxId = _toolContract.totalUserTools(msg.sender);
         //add tool to user in ID +1
-        _toolContract.addUserTool(msg.sender, maxId + 1, _toolLvl);
-        
+        _toolContract.addUserTool(msg.sender, _toolLvl);
     }
 
     function harvest(ITools _toolContract, uint id) public {
            
         ITools.UserTools memory userToolStatus = _toolContract.userTools(msg.sender, id);
-        ITools.Tool memory toolInfo = _t //check if tool is valid
+        ITools.Tool memory toolInfo = _toolContract.tools(userToolStatus.lvl); //check if tool is valid
         require(userToolStatus.lvl != 0, "Tool not found");
         require(userToolStatus.durability >= toolInfo.durabilityConsumption, "Tool is broken");
         _toolContract.editUserTool(msg.sender, id, userToolStatus.lvl, userToolStatus.durability-toolInfo.durabilityConsumption, block.timestamp);
         if(userToolStatus.durability == toolInfo.durabilityConsumption){
-            deleteTool(_toolContract, id);
+            deleteTool(_toolContract, id, msg.sender);
         }
         uint256 energyConsumption = _toolContract.tools(userToolStatus.lvl).energyConsumption;
         require(users[msg.sender].energy >= energyConsumption, "Not enough energy");
@@ -98,7 +122,6 @@ contract FarmerWorld {
 
     }
 
-    
     function repair(
         ITools _toolContract, 
         uint id, 
@@ -142,24 +165,7 @@ contract FarmerWorld {
         //update user gold
         users[user].goldBalance -= goldAmount;
     }
-    
-    function withdraw(IERC20 _tokenContract, uint256 amount) public {
-        address tokenAddress = address(_tokenContract);
-        if (tokenAddress == address(woodToken)) {
-            require(users[msg.sender].woodBalance >= amount, "Not enough wood");
-            users[msg.sender].woodBalance -= amount;
-        } else if (tokenAddress == address(goldToken)) {
-            require(users[msg.sender].goldBalance >= amount, "Not enough gold");
-            users[msg.sender].goldBalance -= amount;
-        } else if (tokenAddress == address(foodToken)) {
-            require(users[msg.sender].foodBalance >= amount, "Not enough food");
-            users[msg.sender].foodBalance -= amount;
-        } else {
-            revert("Unsupported token");
-        }
-        //transfer token to user
-        _tokenContract.transfer(msg.sender, amount);
-    }
+
 
     function deposit(
         ISignatureTransfer.PermitTransferFrom memory permit,
@@ -220,7 +226,8 @@ contract FarmerWorld {
 
     function editUser(address user, uint256 woodBalance, uint256 goldBalance, uint256 foodBalance, uint256 energy, uint256 maxEnergy) public {
         require(contractCallers[msg.sender], "Only contract caller can edit user");
-        users[user] = User(woodBalance, goldBalance, foodBalance, energy, maxEnergy);
+        bool freeClaimed = users[user].freeClaimed;
+        users[user] = User(woodBalance, goldBalance, foodBalance, energy, maxEnergy, freeClaimed);
     }
 
     function editUserTool(ITools _toolContract, address user, uint256 id, uint256 lvl, uint256 durability, uint256 lastHarvest) public {

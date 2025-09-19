@@ -7,22 +7,19 @@ const DeployModule = buildModule("DeployModule", (m) => {
     const foodToken = '0xf5B63B0D91AdA138232fc58d14f03AF2885Cb667';
 
     // Deploy Tools contracts
-    const woodTools = "0xB637f5e7AB92cf8443a07ffeEfacC9c0aB0c88dB";    
-    const goldTools = "0x492DEe1430d871A559AE062c547Eb248929a85B3";
-    const foodTools = "0x37Ab199494C9256D9Db31834C2F520F20036956b";
+    const woodTools = "0x9865e76262926a4E37BEdfE6fC893283D976c11E";    
+    const goldTools = "0xB8F24cDdf9F36Be85E9AA5d3F54909825E65D1F0";
+    const foodTools = "0x17c44Cc3d397348Fa43F704b1C0a477228d7d63c";
 
     // Deploy FarmerWorld contract
-    const farmerWorld = m.contract("FarmerWorld", [
-        woodTools,
-        goldTools,
-        foodTools,
+    const farmerWorld = m.contract("FarmerWorld", [ 
         foodToken,
         goldToken,
         woodToken,
+        "0x999561c6c239C9ef660DfbE38cc2CE6BD0c2EcBa"
     ]);
 
     return {
-        
         farmerWorld,
     };
 });
